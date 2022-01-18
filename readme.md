@@ -160,7 +160,7 @@ Are you sure you want to proceed sending [3.025706] ADA and the assets [1 tttttt
 .\purchase.ps1 -delete
 
 Warning!
-Are you sure you want to proceed deleting all the address?
+Are you sure you want to proceed deleting all the addresses?
 [Y] Yes  [N] No  [?] Help (default is "N"): Y
 ```
 

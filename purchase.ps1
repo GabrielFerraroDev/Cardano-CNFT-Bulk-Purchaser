@@ -375,7 +375,7 @@ switch ($paramSetName) {
   }
   "Delete" {
    
-    $question = "Are you sure you want to proceed deleting all the address?"
+    $question = "Are you sure you want to proceed deleting all the addresses?"
     $decision = $Host.UI.PromptForChoice($TITLE, $question, $CHOICES, 1)
     if ($decision -eq 1) {
       Write-Host "Aborting operation";
