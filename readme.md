@@ -36,6 +36,10 @@ The `BulkSend` module will send `X` \* `N` ADA from a single generated wallet to
 
 The `Redeem` module will extract all ADA and every CNFT, and send it back to the specified wallet.
 
+### Delete
+
+The `Delete` module will delete all the files inside the address directory.
+
 ## Arguments
 
 `-count`: The number of wallets and addresses to [Build, Verify, Send, Redeem] from.
@@ -55,6 +59,8 @@ The `Redeem` module will extract all ADA and every CNFT, and send it back to the
 `-wallet`: The address ADA and CNFTs are sent to when executing the `Redeem` module.
 
 `-safemode`: Set the `Send` or `Receive` mode to run in safety mode, prompting for approval before sending transactions. This will allow for extra time to double-check the command-line arguments to ensure ADA is sent to the correct location.
+
+`-delete`: Set the delete flag to execute the `Delete` module.
 
 ## Examples
 
@@ -148,10 +154,20 @@ Are you sure you want to proceed sending [3.025706] ADA and the assets [1 tttttt
 [10-11-2021 20:34:26:824] Transaction successfully submitted.
 ```
 
+--- Delete all wallets inside address directory ---
+
+```
+.\purchase.ps1 -delete
+
+Warning!
+Are you sure you want to proceed deleting all the address?
+[Y] Yes  [N] No  [?] Help (default is "N"): Y
+```
+
 ## Donations
 
 If this script is useful for you, please consider donating ADA to the following address:
 
 ```
-addr1q9afhw5v8rkydmvd34kl6mjvllr58lsf8kjv8wnyftf73g4utnxgcn0srryfpc4tmlq0n9lr9w5uhzqax88dneyhs48q84wugk
+addr1qymrmjmazaxs8qx2z0y9dejdwgd08nzlalplf5vnpkaknmvhnq5hd6uf3ydsea8dlfzq06dxk44wt022wetck3ncr8hquku4yh
 ```
