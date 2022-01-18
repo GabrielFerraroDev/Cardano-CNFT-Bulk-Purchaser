@@ -7,7 +7,8 @@ param
   [Parameter(ParameterSetName = 'Send', Position = 2, Mandatory = $true)][string]$receiver,
   [Parameter(ParameterSetName = 'Build', Position = 1, Mandatory = $true)][switch]$build,
   [Parameter(ParameterSetName = 'Verify', Position = 1, Mandatory = $true)][switch]$verify,
-  [Parameter(ParameterSetName = 'Redeem', Position = 1, Mandatory = $true)][string]$wallet
+  [Parameter(ParameterSetName = 'Redeem', Position = 1, Mandatory = $true)][string]$wallet,
+  [Parameter(ParameterSetName = 'Delete', Position = 1, Mandatory = $true)][switch]$delete
 )
 
 # Constants required for program functionality
@@ -27,12 +28,6 @@ $env:CARDANO_NODE_SOCKET_PATH = $socket_path
 $paramSetName = $PsCmdlet.ParameterSetName
 $programName = $MyInvocation.MyCommand
 
-
-
-if ($count -le 0) {
-  Write-Host "ERROR: The -count argument must be greater than 0." -ForegroundColor Red
-  $paramSetName = "Help"
-}
 
 switch ($paramSetName) {
   "Help" {
@@ -72,6 +67,10 @@ switch ($paramSetName) {
   }
   "Build" {
     # Create the $BASE_PATH directory if it does not exist already
+    if ($count -le 0) {
+      Write-Host "ERROR: The -count argument must be greater than 0." -ForegroundColor Red
+      $paramSetName = "Help"
+    }
 
     if ([System.IO.Directory]::Exists($BASE_PATH) -eq $false) {
       [System.IO.Directory]::CreateDirectory($BASE_PATH)
@@ -128,7 +127,10 @@ switch ($paramSetName) {
   }
   "Verify" {
     # From 1 to $count, check that the required address files exist
-    
+    if ($count -le 0) {
+      Write-Host "ERROR: The -count argument must be greater than 0." -ForegroundColor Red
+      $paramSetName = "Help"
+    }
     for ($i = 1; $i -le $count; $i = $i + 1) {
       $addressFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.addr")
       if ([System.IO.File]::Exists($addressFile) -eq $false) { throw "The file [$addressFile] does not exist. Please ensure all [$PAYMENT.*] files are generated using the build operation and funded with ADA." }
@@ -172,7 +174,10 @@ switch ($paramSetName) {
     break;
   }
   "Send" {
-    
+    if ($count -le 0) {
+      Write-Host "ERROR: The -count argument must be greater than 0." -ForegroundColor Red
+      $paramSetName = "Help"
+    }
     # Prompt the user if they passed in the -safemode flag so they can double-check any details before proceeding
     if ($safemode -eq $true) {
       $question = "Are you sure you want to proceed sending [$cost] ADA to the following address: [$receiver]?"
@@ -280,6 +285,10 @@ switch ($paramSetName) {
     
   }
   "Redeem" {
+    if ($count -le 0) {
+      Write-Host "ERROR: The -count argument must be greater than 0." -ForegroundColor Red
+      $paramSetName = "Help"
+    }
     # Prompt the user if they passed in the -safemode flag so they can double-check any details before proceeding
     if ($safemode -eq $true) {
       $question = "Are you sure you want to proceed sending all received assets to the following address: [$wallet]?"
@@ -362,6 +371,21 @@ switch ($paramSetName) {
       $result = &$CLI_PATH transaction submit --tx-file "$signFile" --mainnet
       Write-Host "[$(Get-Date -Format 'MM/dd/yyyy HH:mm:ss:fff')] $result"
     }
+    break;
+  }
+  "Delete" {
+   
+    $question = "Are you sure you want to proceed deleting all the address?"
+    $decision = $Host.UI.PromptForChoice($TITLE, $question, $CHOICES, 1)
+    if ($decision -eq 1) {
+      Write-Host "Aborting operation";
+      return;
+    }
+    
+
+    Remove-Item –path $BASE_PATH*
+
+
     break;
   }
 }
