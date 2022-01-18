@@ -14,7 +14,7 @@ This tool will leverage the cardano-cli.exe which ships with the Daedalus wallet
 
 ## Modules
 
-This tool has 4 modes: [Build, Verify, Send, Redeem].
+This tool has 5 modes: [Build, Verify, Send, Redeem, Delete].
 
 ### Build
 
