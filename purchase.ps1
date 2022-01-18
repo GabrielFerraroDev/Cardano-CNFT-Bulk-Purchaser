@@ -28,7 +28,6 @@ $paramSetName = $PsCmdlet.ParameterSetName
 $programName = $MyInvocation.MyCommand
 
 
-$testeGlobalAddress
 
 if ($count -le 0) {
   Write-Host "ERROR: The -count argument must be greater than 0." -ForegroundColor Red
@@ -78,32 +77,36 @@ switch ($paramSetName) {
       [System.IO.Directory]::CreateDirectory($BASE_PATH)
     }
 
-    # From 1 to $count, check that none of the key or address files already exist to ensure an empty build
-    for ($i = 1; $i -le $count; $i = $i + 1) {
+    # check that none of the key or address files already exist
+    $countWallets = 0
+    $flag = $true
+    $i = 1
+    while ($flag -eq $true) {
       $verifyKeyFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.vkey")
       $verifyStakeKeyFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.vskey")
       $signKeyFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.skey")
       $signStakeKeyFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.sskey")
       $addressFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.addr")
-      if ([System.IO.File]::Exists($verifyKeyFile) -eq $true) { throw "The file [$verifyKeyFile] already exists. Please ensure all [$PAYMENT.*] files are cleared of any funds and do not exist before performing the build operation." }
-      if ([System.IO.File]::Exists($verifyStakeKeyFile) -eq $true) { throw "The file [$verifyStakeKeyFile] already exists. Please ensure all [$PAYMENT.*] files are cleared of any funds and do not exist before performing the build operation." }
-      if ([System.IO.File]::Exists($signKeyFile) -eq $true) { throw "The file [$signKeyFile] already exists. Please ensure all [$PAYMENT.*] files are cleared of any funds and do not exist before performing the build operation." }
-      if ([System.IO.File]::Exists($signStakeKeyFile) -eq $true) { throw "The file [$signStakeKeyFile] already exists. Please ensure all [$PAYMENT.*] files are cleared of any funds and do not exist before performing the build operation." }
-      if ([System.IO.File]::Exists($addressFile) -eq $true) { throw "The file [$addressFile] already exists. Please ensure all [$PAYMENT.*] files are cleared of any funds and do not exist before performing the build operation." }
+      $i = $i + 1
+      if ([System.IO.File]::Exists($addressFile) -eq $true) {
+        $countWallets = $countWallets + 1
+      }
+      else {
+        $flag = $false
+      }
     }
     # From 1 to $count, generate the key and address files
-
-    for ($i = 1; $i -le $count; $i = $i + 1) {
+   
+    for ($i = $countWallets + 1 ; $i -le $count + $countWallets; $i = $i + 1) {
       $verifyKeyFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.vkey")
       $verifyStakeKeyFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.vskey")
       $signKeyFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.skey")
       $signStakeKeyFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.sskey")
       $addressFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.addr")
       &$CLI_PATH address key-gen --verification-key-file "$verifyKeyFile" --signing-key-file "$signKeyFile"
-      &$CLI_PATH stake-address key-gen --verification-key-file "$verifyStakeKeyFile" --signing-key-file "signStakeKeyFile"
+      &$CLI_PATH stake-address key-gen --verification-key-file "$verifyStakeKeyFile" --signing-key-file "$signStakeKeyFile"
       &$CLI_PATH address build --payment-verification-key-file "$verifyKeyFile" --stake-verification-key-file "$verifyStakeKeyFile" --out-file "$addressFile" --mainnet
       $address = type $addressFile
-      $testeGlobalAddress = $address
 
       Write-Host "Wallet Address ${i}: $address"
     }
