@@ -166,8 +166,9 @@ Are you sure you want to proceed deleting all the addresses?
 
 ## Donations
 
-If this script is useful for you, please consider donating ADA to the following address:
+If this script is useful for you, please consider donating ADA to the following addresses:
 
 ```
-addr1qymrmjmazaxs8qx2z0y9dejdwgd08nzlalplf5vnpkaknmvhnq5hd6uf3ydsea8dlfzq06dxk44wt022wetck3ncr8hquku4yh
+Creator: addr1q9afhw5v8rkydmvd34kl6mjvllr58lsf8kjv8wnyftf73g4utnxgcn0srryfpc4tmlq0n9lr9w5uhzqax88dneyhs48q84wugk
+Developer: addr1qymrmjmazaxs8qx2z0y9dejdwgd08nzlalplf5vnpkaknmvhnq5hd6uf3ydsea8dlfzq06dxk44wt022wetck3ncr8hquku4yh
 ```
