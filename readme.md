@@ -14,7 +14,7 @@ This tool will leverage the cardano-cli.exe which ships with the Daedalus wallet
 
 ## Modules
 
-This tool has 5 modes: [Build, Verify, Send, Redeem, Delete].
+This tool has 5 modes: [Build, Verify, Send, Redeem, DeleteAll].
 
 ### Build
 
@@ -36,9 +36,9 @@ The `BulkSend` module will send `X` \* `N` ADA from a single generated wallet to
 
 The `Redeem` module will extract all ADA and every CNFT, and send it back to the specified wallet.
 
-### Delete
+### DeleteAll
 
-The `Delete` module will delete all the files inside the address directory.
+The `DeleteAll` module will delete all the files inside the address directory.
 
 ## Arguments
 
@@ -60,7 +60,7 @@ The `Delete` module will delete all the files inside the address directory.
 
 `-safemode`: Set the `Send` or `Receive` mode to run in safety mode, prompting for approval before sending transactions. This will allow for extra time to double-check the command-line arguments to ensure ADA is sent to the correct location.
 
-`-delete`: Set the delete flag to execute the `Delete` module.
+`-deleteall`: Set the delete flag to execute the `DeleteAll` module.
 
 ## Examples
 
@@ -157,7 +157,7 @@ Are you sure you want to proceed sending [3.025706] ADA and the assets [1 tttttt
 --- Delete all wallets inside address directory ---
 
 ```
-.\purchase.ps1 -delete
+.\purchase.ps1 -deleteall
 
 Warning!
 Are you sure you want to proceed deleting all the addresses?

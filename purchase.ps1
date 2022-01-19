@@ -8,7 +8,7 @@ param
   [Parameter(ParameterSetName = 'Build', Position = 1, Mandatory = $true)][switch]$build,
   [Parameter(ParameterSetName = 'Verify', Position = 1, Mandatory = $true)][switch]$verify,
   [Parameter(ParameterSetName = 'Redeem', Position = 1, Mandatory = $true)][string]$wallet,
-  [Parameter(ParameterSetName = 'Delete', Position = 1, Mandatory = $true)][switch]$delete
+  [Parameter(ParameterSetName = 'Deleteall', Position = 1, Mandatory = $true)][switch]$deleteall
 )
 
 # Constants required for program functionality
@@ -174,6 +174,7 @@ switch ($paramSetName) {
     break;
   }
   "Send" {
+
     if ($count -le 0) {
       Write-Host "ERROR: The -count argument must be greater than 0." -ForegroundColor Red
       $paramSetName = "Help"
@@ -193,9 +194,7 @@ switch ($paramSetName) {
     &$CLI_PATH query protocol-parameters --mainnet --out-file "$protocolFile"
     $arrayCount = @()
     
-    
-    $timer = [System.Diagnostics.Stopwatch]::StartNew()
-
+  
     # From 1 to $count, check that the appropriate key and address files exist
     for ($i = 1; $i -le $count; $i = $i + 1) {
       $signKeyFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.skey")
@@ -204,7 +203,6 @@ switch ($paramSetName) {
       if ([System.IO.File]::Exists($addressFile) -eq $false) { throw "The file [$addressFile] does not exist. Please ensure all [$PAYMENT.*] files are generated using the build operation and funded with ADA." }
       $arrayCount += $i
     }
-    write-host $timer.Elapsed.TotalSeconds "sec. [Verificando se já existem os arquivos]"
 
     $paramsForEach = $CLI_PATH, $receiver, $protocolFile, $PAYMENT, $cost, $BASE_PATH
 
@@ -218,7 +216,6 @@ switch ($paramSetName) {
         $cost = $paramsForEach[4]
         $BASE_PATH = $paramsForEach[5]
 
-        $timer = [System.Diagnostics.Stopwatch]::StartNew()
         $signKeyFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$_.skey")
         $addressFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$_.addr")
         $cacheFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$_.cache")
@@ -230,7 +227,6 @@ switch ($paramSetName) {
       
         $address = type $addressFile
         
-        Write-Output $timer.Elapsed.TotalSeconds "sec. [Leu os arquivos]"
         # If the cached UTXO file exists, use this for faster performance
         if ([System.IO.File]::Exists($cacheFile) -eq $true) {
           $utxo = type $cacheFile
@@ -254,28 +250,22 @@ switch ($paramSetName) {
           $amount = ($utxo[2] -split " ")[0]
           Write-Host "Querying Chain"
         }
-        $timer = [System.Diagnostics.Stopwatch]::StartNew()
         # Build raw transaction with empty fee parameters, and calculate the minimum fee
         &$CLI_PATH transaction build-raw --tx-in "$txHash#$txIx" --tx-out "$receiver+$lovelace" --tx-out "$address+$sendoutput" --fee $sendfee --out-file "$draftFile"
         $sendfee = (&$CLI_PATH transaction calculate-min-fee --tx-body-file "$draftFile" --tx-in-count 1 --tx-out-count 2 --witness-count 1 --mainnet --protocol-params-file "$protocolFile").split(" ")[0]
         $sendoutput = $amount - $sendfee - $lovelace
-        write-host $timer.Elapsed.TotalSeconds "sec. [Realizou a primeira parte da transação]"
-        $timer = [System.Diagnostics.Stopwatch]::StartNew()
         # Using the new calculated minimum fee, build a new raw transaction and calculate minimum fee again as transaction size has slightly changed
         &$CLI_PATH transaction build-raw --tx-in "$txHash#$txIx" --tx-out "$receiver+$lovelace" --tx-out "$address+$sendoutput" --fee $sendfee --out-file "$draftFile"
         $sendfee2 = (&$CLI_PATH transaction calculate-min-fee --tx-body-file "$draftFile" --tx-in-count 1 --tx-out-count 2 --witness-count 1 --mainnet --protocol-params-file "$protocolFile").split(" ")[0]
         $sendoutput = $amount - $sendfee2 - $lovelace
-        write-host $timer.Elapsed.TotalSeconds "sec. [Realizou a Segunda parte da transação]"
-        $timer = [System.Diagnostics.Stopwatch]::StartNew()
 
         # sign the transaction and send
         &$CLI_PATH transaction sign --signing-key-file "$signKeyFile" --mainnet --tx-body-file "$draftFile" --out-file "$signFile"
         $result = &$CLI_PATH transaction submit --tx-file "$signFile" --mainnet
         Write-Host "[$(Get-Date -Format 'MM/dd/yyyy HH:mm:ss:fff')] $result"
 
-        write-host $timer.Elapsed.TotalSeconds "sec. [Realizou a terceira parte da transacao]"
         
-      } -ThrottleLimit 100  
+      } -ThrottleLimit $count  
     }).TotalSeconds
 
   
@@ -373,7 +363,7 @@ switch ($paramSetName) {
     }
     break;
   }
-  "Delete" {
+  "DeleteAll" {
    
     $question = "Are you sure you want to proceed deleting all the addresses?"
     $decision = $Host.UI.PromptForChoice($TITLE, $question, $CHOICES, 1)
