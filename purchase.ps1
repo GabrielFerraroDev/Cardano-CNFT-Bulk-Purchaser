@@ -7,33 +7,27 @@ param
   [Parameter(ParameterSetName = 'Send', Position = 2, Mandatory = $true)][string]$receiver,
   [Parameter(ParameterSetName = 'Build', Position = 1, Mandatory = $true)][switch]$build,
   [Parameter(ParameterSetName = 'Verify', Position = 1, Mandatory = $true)][switch]$verify,
-  [Parameter(ParameterSetName = 'Redeem', Position = 1, Mandatory = $true)][string]$wallet
+  [Parameter(ParameterSetName = 'Redeem', Position = 1, Mandatory = $true)][string]$wallet,
+  [Parameter(ParameterSetName = 'Deleteall', Position = 1, Mandatory = $true)][switch]$deleteall
 )
 
 # Constants required for program functionality
-$BASE_PATH = "$PSRoot\address"
+$BASE_PATH = "$PSScriptRoot\address"
 $PAYMENT = "payment"
-$NODE_PATH = (Get-WmiObject Win32_Process -Filter "name = 'cardano-node.exe'" | Select-Object ExecutablePath).ExecutablePath
+$NODE_PATH = (Get-CimInstance Win32_Process -Filter "name = 'cardano-node.exe'" | Select-Object ExecutablePath).ExecutablePath
 $CLI_PATH = [System.IO.Path]::Combine((Get-Item $NODE_PATH).Directory.FullName, "cardano-cli.exe")
 $TITLE = "Warning!"
 $CHOICES = '&Yes', '&No'
-write-host "$CLI_PATH"
+
 
 # Socket path to communicate with the blockchain using cardano-node
-$socket_path = (Get-WmiObject Win32_Process -Filter "name = 'cardano-node.exe'" | Select-Object CommandLine).CommandLine.Split(" ", [System.StringSplitOptions]::RemoveEmptyEntries)[3]
+$socket_path = (Get-CimInstance Win32_Process -Filter "name = 'cardano-node.exe'" | Select-Object CommandLine).CommandLine.Split(" ", [System.StringSplitOptions]::RemoveEmptyEntries)[3]
 $env:CARDANO_NODE_SOCKET_PATH = $socket_path
 
-# The name of the  and the mode it will execute in
+# The name of the script and the mode it will execute in
 $paramSetName = $PsCmdlet.ParameterSetName
 $programName = $MyInvocation.MyCommand
 
-
-
-
-if ($count -le 0) {
-  Write-Host "ERROR: The -count argument must be greater than 0." -ForegroundColor Red
-  $paramSetName = "Help"
-}
 
 switch ($paramSetName) {
   "Help" {
@@ -64,7 +58,7 @@ switch ($paramSetName) {
     Write-Host "* .\$programName -count 3 -verify"
     Write-Host "* .\$programName -count 3 -safemode -wallet addr1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     Write-Host "* "
-    Write-Host "* If this  is useful for you, please consider donating ADA to the following address:" -ForegroundColor Green
+    Write-Host "* If this script is useful for you, please consider donating ADA to the following address:" -ForegroundColor Green
     Write-Host "* addr1q9afhw5v8rkydmvd34kl6mjvllr58lsf8kjv8wnyftf73g4utnxgcn0srryfpc4tmlq0n9lr9w5uhzqax88dneyhs48q84wugk" -ForegroundColor Green
     Write-Host "* "
     Write-Host "*********************************************************************************"
@@ -73,35 +67,46 @@ switch ($paramSetName) {
   }
   "Build" {
     # Create the $BASE_PATH directory if it does not exist already
+    if ($count -le 0) {
+      Write-Host "ERROR: The -count argument must be greater than 0." -ForegroundColor Red
+      $paramSetName = "Help"
+    }
+
     if ([System.IO.Directory]::Exists($BASE_PATH) -eq $false) {
       [System.IO.Directory]::CreateDirectory($BASE_PATH)
     }
-    
-    # From 1 to $count, check that none of the key or address files already exist to ensure an empty build
-    for ($i = 1; $i -le $count; $i = $i + 1) {
+
+    # check that none of the key or address files already exist
+    $countWallets = 0
+    $flag = $true
+    $i = 1
+    while ($flag -eq $true) {
       $verifyKeyFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.vkey")
       $verifyStakeKeyFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.vskey")
       $signKeyFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.skey")
       $signStakeKeyFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.sskey")
       $addressFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.addr")
-      if ([System.IO.File]::Exists($verifyKeyFile) -eq $true) { throw "The file [$verifyKeyFile] already exists. Please ensure all [$PAYMENT.*] files are cleared of any funds and do not exist before performing the build operation." }
-      if ([System.IO.File]::Exists($verifyStakeKeyFile) -eq $true) { throw "The file [$verifyStakeKeyFile] already exists. Please ensure all [$PAYMENT.*] files are cleared of any funds and do not exist before performing the build operation." }
-      if ([System.IO.File]::Exists($signKeyFile) -eq $true) { throw "The file [$signKeyFile] already exists. Please ensure all [$PAYMENT.*] files are cleared of any funds and do not exist before performing the build operation." }
-      if ([System.IO.File]::Exists($signStakeKeyFile) -eq $true) { throw "The file [$signStakeKeyFile] already exists. Please ensure all [$PAYMENT.*] files are cleared of any funds and do not exist before performing the build operation." }
-      if ([System.IO.File]::Exists($addressFile) -eq $true) { throw "The file [$addressFile] already exists. Please ensure all [$PAYMENT.*] files are cleared of any funds and do not exist before performing the build operation." }
+      $i = $i + 1
+      if ([System.IO.File]::Exists($addressFile) -eq $true) {
+        $countWallets = $countWallets + 1
+      }
+      else {
+        $flag = $false
+      }
     }
-    
     # From 1 to $count, generate the key and address files
-    for ($i = 1; $i -le $count; $i = $i + 1) {
+   
+    for ($i = $countWallets + 1 ; $i -le $count + $countWallets; $i = $i + 1) {
       $verifyKeyFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.vkey")
       $verifyStakeKeyFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.vskey")
       $signKeyFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.skey")
       $signStakeKeyFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.sskey")
       $addressFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.addr")
       &$CLI_PATH address key-gen --verification-key-file "$verifyKeyFile" --signing-key-file "$signKeyFile"
-      &$CLI_PATH stake-address key-gen --verification-key-file "$verifyStakeKeyFile" --signing-key-file "signStakeKeyFile"
+      &$CLI_PATH stake-address key-gen --verification-key-file "$verifyStakeKeyFile" --signing-key-file "$signStakeKeyFile"
       &$CLI_PATH address build --payment-verification-key-file "$verifyKeyFile" --stake-verification-key-file "$verifyStakeKeyFile" --out-file "$addressFile" --mainnet
       $address = type $addressFile
+
       Write-Host "Wallet Address ${i}: $address"
     }
     
@@ -122,6 +127,10 @@ switch ($paramSetName) {
   }
   "Verify" {
     # From 1 to $count, check that the required address files exist
+    if ($count -le 0) {
+      Write-Host "ERROR: The -count argument must be greater than 0." -ForegroundColor Red
+      $paramSetName = "Help"
+    }
     for ($i = 1; $i -le $count; $i = $i + 1) {
       $addressFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.addr")
       if ([System.IO.File]::Exists($addressFile) -eq $false) { throw "The file [$addressFile] does not exist. Please ensure all [$PAYMENT.*] files are generated using the build operation and funded with ADA." }
@@ -165,7 +174,11 @@ switch ($paramSetName) {
     break;
   }
   "Send" {
-    
+
+    if ($count -le 0) {
+      Write-Host "ERROR: The -count argument must be greater than 0." -ForegroundColor Red
+      $paramSetName = "Help"
+    }
     # Prompt the user if they passed in the -safemode flag so they can double-check any details before proceeding
     if ($safemode -eq $true) {
       $question = "Are you sure you want to proceed sending [$cost] ADA to the following address: [$receiver]?"
@@ -179,110 +192,84 @@ switch ($paramSetName) {
     # Create the necessary protocol.json file needed for calculating the minimum fees
     $protocolFile = [System.IO.Path]::Combine($BASE_PATH, "protocol.json")
     &$CLI_PATH query protocol-parameters --mainnet --out-file "$protocolFile"
+    $arrayCount = @()
     
+  
     # From 1 to $count, check that the appropriate key and address files exist
     for ($i = 1; $i -le $count; $i = $i + 1) {
       $signKeyFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.skey")
       $addressFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.addr")
       if ([System.IO.File]::Exists($signKeyFile) -eq $false) { throw "The file [$signKeyFile] does not exist. Please ensure all [$PAYMENT.*] files are generated using the build operation and funded with ADA." }
       if ([System.IO.File]::Exists($addressFile) -eq $false) { throw "The file [$addressFile] does not exist. Please ensure all [$PAYMENT.*] files are generated using the build operation and funded with ADA." }
+      $arrayCount += $i
     }
-    $jobs = @()
 
-    # From 1 to $count, send the $cost amount of ADA to the $receiver address
-    
-    for ($i = 1; $i -le $count; $i = $i + 1) {
-      
-      
-      $signKeyFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.skey")
-      $addressFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.addr")
-      $cacheFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.cache")
-      $draftFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.draft")
-      $signFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$i.sign")
-      $sendfee = 0
-      $sendoutput = 0
-      $lovelace = [int64][System.Math]::Truncate($cost * 1000000)
-       
-      $address = type $addressFile
+    $paramsForEach = $CLI_PATH, $receiver, $protocolFile, $PAYMENT, $cost, $BASE_PATH
 
-      
-     
-      # If the cached UTXO file exists, use this for faster performance
-      if ([System.IO.File]::Exists($cacheFile) -eq $true) {
-        $utxo = type $cacheFile
-        $utxo = $utxo -split ","
-        $txHash = $utxo[0]
-        $txIx = $utxo[1]
-        $amount = $utxo[2]
-        Write-Host "Using Cache File"
-      }
-      
-      # If there is no cache file, query the UTXO from the blockchain
-      else {
-        $utxo = &$CLI_PATH query utxo --address $address --mainnet
-        $utxo = $utxo.Split("-", [System.StringSplitOptions]::RemoveEmptyEntries)
-        if ($utxo.Count -le 1) { throw "The address [$address] from [$addressFile] has no UTXOs. Please fund the address and re-run the verify step." }
-        $utxo = $utxo[1].Trim()
-        $utxo = $utxo -replace "\s{2,}", "{ZZ}"
-        $utxo = $utxo -split "{zz}"
-        $txHash = $utxo[0]
-        $txIx = $utxo[1]
-        $amount = ($utxo[2] -split " ")[0]
-        Write-Host "Querying Chain"
-      }
-      $params = $CLI_PATH, $txHash, $txIx, $receiver, $lovelace, $address, $sendoutput, $sendfee, $draftFile, $protocolFile, $amount, $signKeyFile, $signFile
+    (Measure-Command {
+      $arrayCount | ForEach-Object -Parallel {
+        $paramsForEach = $using:paramsForEach
+        $CLI_PATH = $paramsForEach[0]
+        $receiver = $paramsForEach[1]
+        $protocolFile = $paramsForEach[2]
+        $PAYMENT = $paramsForEach[3]
+        $cost = $paramsForEach[4]
+        $BASE_PATH = $paramsForEach[5]
 
-      $sendAda = {
-        Param($params)
-        $CLI_PATH = $params[0]
-        $txHash = $params[1]
-        $txIx = $params[2]
-        $receiver = $params[3]
-        $lovelace = $params[4]
-        $address = $params[5]
-        $sendoutput = $params[6]
-        $sendfee = $params[7]
-        $draftFile = $params[8]
-        $protocolFile = $params[9]
-        $amount = $params[10]
-        $signKeyFile = $params[11]
-        $signFile = $params[12]
-
+        $signKeyFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$_.skey")
+        $addressFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$_.addr")
+        $cacheFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$_.cache")
+        $draftFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$_.draft")
+        $signFile = [System.IO.Path]::Combine($BASE_PATH, "$PAYMENT$_.sign")
+        $sendfee = 0
+        $sendoutput = 0
+        $lovelace = [int64][System.Math]::Truncate($cost * 1000000)
+      
+        $address = type $addressFile
+        
+        # If the cached UTXO file exists, use this for faster performance
+        if ([System.IO.File]::Exists($cacheFile) -eq $true) {
+          $utxo = type $cacheFile
+          $utxo = $utxo -split ","
+          $txHash = $utxo[0]
+          $txIx = $utxo[1]
+          $amount = $utxo[2]
+          Write-Host "Using Cache File"
+        }
+      
+        # If there is no cache file, query the UTXO from the blockchain
+        else {
+          $utxo = &$CLI_PATH query utxo --address $address --mainnet
+          $utxo = $utxo.Split("-", [System.StringSplitOptions]::RemoveEmptyEntries)
+          if ($utxo.Count -le 1) { throw "The address [$address] from [$addressFile] has no UTXOs. Please fund the address and re-run the verify step." }
+          $utxo = $utxo[1].Trim()
+          $utxo = $utxo -replace "\s{2,}", "{ZZ}"
+          $utxo = $utxo -split "{zz}"
+          $txHash = $utxo[0]
+          $txIx = $utxo[1]
+          $amount = ($utxo[2] -split " ")[0]
+          Write-Host "Querying Chain"
+        }
         # Build raw transaction with empty fee parameters, and calculate the minimum fee
         &$CLI_PATH transaction build-raw --tx-in "$txHash#$txIx" --tx-out "$receiver+$lovelace" --tx-out "$address+$sendoutput" --fee $sendfee --out-file "$draftFile"
         $sendfee = (&$CLI_PATH transaction calculate-min-fee --tx-body-file "$draftFile" --tx-in-count 1 --tx-out-count 2 --witness-count 1 --mainnet --protocol-params-file "$protocolFile").split(" ")[0]
         $sendoutput = $amount - $sendfee - $lovelace
-      
         # Using the new calculated minimum fee, build a new raw transaction and calculate minimum fee again as transaction size has slightly changed
         &$CLI_PATH transaction build-raw --tx-in "$txHash#$txIx" --tx-out "$receiver+$lovelace" --tx-out "$address+$sendoutput" --fee $sendfee --out-file "$draftFile"
         $sendfee2 = (&$CLI_PATH transaction calculate-min-fee --tx-body-file "$draftFile" --tx-in-count 1 --tx-out-count 2 --witness-count 1 --mainnet --protocol-params-file "$protocolFile").split(" ")[0]
         $sendoutput = $amount - $sendfee2 - $lovelace
-      
+
         # sign the transaction and send
         &$CLI_PATH transaction sign --signing-key-file "$signKeyFile" --mainnet --tx-body-file "$draftFile" --out-file "$signFile"
         $result = &$CLI_PATH transaction submit --tx-file "$signFile" --mainnet
         Write-Host "[$(Get-Date -Format 'MM/dd/yyyy HH:mm:ss:fff')] $result"
-      }
-      
-      $jobs += Start-Threadjob -Block $sendAda -argumentlist (, $params)
-      
-      
-      
-      
-    }
-    Wait-Job -Job $jobs | Out-Null
-    
-    foreach ($job in $jobs) {
-      if ($job.State -eq 'Failed') {
-        Write-Host ($job.ChildJobs[0].JobStateInfo.Reason.Message) -ForegroundColor Red
-      }
-      else {
-        Write-Host (Receive-Job $job) -ForegroundColor Green 
-      }
-    }
 
-    <# Wait-Job $copyJob  
-    Receive-Job $copyJob   #>
+        
+      } -ThrottleLimit $count  
+    }).TotalSeconds
+
+  
+   
     break;
     
     
@@ -344,6 +331,7 @@ switch ($paramSetName) {
         $lovelace += $txData[0]
         if ($txData.Length -gt 4) {
           for ($y = 3; $y -lt $txData.Length; $y = $y + 3) {
+            write-host "-->entrou no for $y<--"
             $assetCount = $txData[$y]
             $assetInfo = $txData[$y + 1]
             $txOutAssets += "+""$assetCount $assetInfo"""
@@ -382,7 +370,19 @@ switch ($paramSetName) {
     }
     break;
   }
+  "DeleteAll" {
+   
+    $question = "Are you sure you want to proceed deleting all the addresses?"
+    $decision = $Host.UI.PromptForChoice($TITLE, $question, $CHOICES, 1)
+    if ($decision -eq 1) {
+      Write-Host "Aborting operation";
+      return;
+    }
+    
+
+    Remove-Item –path $BASE_PATH*
+
+
+    break;
+  }
 }
-
-
-
