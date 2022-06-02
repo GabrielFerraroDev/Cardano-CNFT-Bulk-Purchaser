@@ -153,14 +153,13 @@ switch ($paramSetName) {
       # For each UTXO in the address, write out the transaction hash, ix, amount, and any tokens if they exist
       for ($x = 1; $x -lt $utxo.Count; $x = $x + 1) {
         $utxoData = $utxo[$x].Trim()
-        $utxoData = $utxoData -replace "\s{2,}","{ZZ}"
-        $utxoData = $utxoData -split "{ZZ}"
+        $utxoData = $utxoData -replace "\s{2,}", "{ZZ}"
+        $utxoData = $utxoData -split "{zz}"
         $txHash = $utxoData[0]
         $txIx = $utxoData[1]
         $amount = $utxoData[2].Split(" ")[0].ToString()
-        $tokenData = (((($utxoData[2] -replace "TxOutDatumNone","") -split "lovelace")[1] -replace "\+","") -replace "^\s+","").Trim()
-        if ($tokenData -ne "")
-        {
+        $tokenData = (((($utxoData[2] -replace "TxOutDatumHashNone", "") -split "lovelace")[1] -replace "\+", "") -replace "^\s+", "").Trim()
+        if ($tokenData -ne "") {
           $tokenData = ", Tokens=[$tokenData]"
         }
         
@@ -287,7 +286,6 @@ switch ($paramSetName) {
     }
     
     $protocolFile = [System.IO.Path]::Combine($BASE_PATH, "protocol.json")
-    &$CLI_PATH query protocol-parameters --mainnet --out-file "$protocolFile"
     
     # From 1 to $count, check that the appropriate key and address files exist
     for ($i = 1; $i -le $count; $i = $i + 1) {
@@ -322,7 +320,7 @@ switch ($paramSetName) {
       # For each UTXO in the address, extract the ADA amount and any token information
       for ($x = 1; $x -lt $utxo.Count; $x = $x + 1) {
         $utxoChunk = $utxo[$x].Trim()
-        $utxoChunk = (($utxoChunk -replace "\s{2,}","{ZZ}") -split "TxOutDatumNone")
+        $utxoChunk = (($utxoChunk -replace "\s{2,}", "{ZZ}") -split "TxOutDatumHashNone")
         $utxoChunk = $utxoChunk -split "{ZZ}"
         $txIn += "--tx-in"
         $txIn += """$($utxoChunk[0])#$($utxoChunk[1])"""
@@ -331,14 +329,19 @@ switch ($paramSetName) {
         write-host "---> $txData"
         $funds += $txData[0]
         $lovelace += $txData[0]
-        $tokenData = ((($utxoChunk[2] -split "lovelace")[1] -replace "\+","") -replace "^\s+","").Trim()
-        $tokenData = (($tokenData -replace "\s{2,}","{ZZ}") -split "{ZZ}")
-        for ($t = 0; $t -lt $tokenData.Count; $t = $t + 1)
-        {
-          if ($tokenData[$t] -ne "")
-          {
-            $txOutAssets += "+""$($tokenData[$t])"""
+        if ($txData.Length -gt 4) {
+          for ($y = 3; $y -lt $txData.Length; $y = $y + 3) {
+            write-host "-->entrou no for $y<--"
+            $assetCount = $txData[$y]
+            $assetInfo = $txData[$y + 1]
+            $txOutAssets += "+""$assetCount $assetInfo"""
+            
+          
           }
+          $txOutAssets = ($txOutAssets -replace "TxOutDatumNone", "") 
+          $txOutAssets = $txOutAssets.Substring(0, $txOutAssets.Length - 4)
+          write-host "--tx-out "$($wallet)+$($lovelace)$($txOutAssets)""
+          
         }
         
       } 
